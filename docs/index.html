@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cairn — WikiSkill Harness</title>
+<style>
+  :root {
+    --bg:       #0b0b14;
+    --bg-2:     #0f0f1c;
+    --bg-3:     #141425;
+    --surface:  #1a1a2e;
+    --border:   rgba(139,92,246,0.18);
+    --border-hi:rgba(139,92,246,0.45);
+    --purple:   #8b5cf6;
+    --violet:   #a78bfa;
+    --blue:     #60a5fa;
+    --teal:     #2dd4bf;
+    --slate:    #94a3b8;
+    --text:     #e2e8f0;
+    --text-dim: #94a3b8;
+    --code-bg:  #131320;
+    --r:        8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem;
+    height: 56px;
+    background: rgba(11,11,20,0.82);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-size: 1.1rem; font-weight: 700; letter-spacing: .04em;
+    color: var(--text);
+    display: flex; align-items: center; gap: .55rem;
+    text-decoration: none;
+  }
+  .nav-logo svg { flex-shrink: 0; }
+  .nav-links { display: flex; gap: 1.8rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim); font-size: .88rem; text-decoration: none;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--violet); }
+  .nav-cta {
+    font-size: .82rem; font-weight: 600; padding: .42rem 1.1rem;
+    background: rgba(139,92,246,0.15); border: 1px solid var(--border-hi);
+    color: var(--violet); border-radius: 6px; text-decoration: none;
+    transition: background .2s, border-color .2s;
+  }
+  .nav-cta:hover { background: rgba(139,92,246,0.28); border-color: var(--purple); }
+
+  /* ── HERO ── */
+  #hero {
+    position: relative; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 7rem 1.5rem 5rem;
+    overflow: hidden;
+  }
+  #hero-canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+  .hero-label {
+    position: relative; z-index: 1;
+    font-size: .78rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--teal);
+    background: rgba(45,212,191,0.08); border: 1px solid rgba(45,212,191,0.25);
+    border-radius: 100px; padding: .32rem 1rem; display: inline-block; margin-bottom: 2rem;
+  }
+  .hero-title {
+    position: relative; z-index: 1;
+    font-size: clamp(3rem, 8vw, 6.5rem);
+    font-weight: 800; line-height: 1.04; letter-spacing: -.03em;
+    background: linear-gradient(135deg, #fff 20%, var(--violet) 55%, var(--teal) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1.6rem;
+  }
+  .hero-title em { font-style: normal; }
+  .hero-sub {
+    position: relative; z-index: 1;
+    font-size: clamp(1rem, 2.5vw, 1.3rem); font-weight: 400;
+    color: var(--slate); max-width: 640px; margin: 0 auto 3rem;
+    line-height: 1.7;
+  }
+  .hero-sub strong { color: var(--text); font-weight: 600; }
+  .hero-actions {
+    position: relative; z-index: 1;
+    display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+  }
+  .btn-primary {
+    padding: .75rem 2rem; font-size: .95rem; font-weight: 600;
+    background: linear-gradient(135deg, var(--purple), #6d28d9);
+    color: #fff; border-radius: var(--r); text-decoration: none;
+    box-shadow: 0 0 32px rgba(139,92,246,0.35);
+    transition: box-shadow .2s, transform .15s;
+  }
+  .btn-primary:hover { box-shadow: 0 0 48px rgba(139,92,246,0.55); transform: translateY(-1px); }
+  .btn-secondary {
+    padding: .75rem 2rem; font-size: .95rem; font-weight: 600;
+    color: var(--text-dim); border: 1px solid var(--border-hi);
+    border-radius: var(--r); text-decoration: none; background: transparent;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--violet); background: rgba(139,92,246,0.08); }
+
+  /* ── SHARED SECTION ── */
+  section { padding: 6rem 1.5rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: .78rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--purple); margin-bottom: .9rem;
+  }
+  .section-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800;
+    line-height: 1.12; letter-spacing: -.025em; color: var(--text);
+    margin-bottom: 1rem;
+  }
+  .section-title .accent { color: var(--violet); }
+  .section-body {
+    font-size: 1.08rem; color: var(--text-dim); max-width: 640px; line-height: 1.75;
+  }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+  /* ── LOOP SECTION ── */
+  #loop { background: var(--bg-2); }
+  .loop-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: start; margin-top: 4rem;
+  }
+  @media (max-width: 768px) { .loop-grid { grid-template-columns: 1fr; } }
+  .loop-steps { display: flex; flex-direction: column; gap: 0; }
+  .loop-step {
+    display: flex; gap: 1.2rem; padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .loop-step:last-child { border-bottom: none; }
+  .step-num {
+    flex-shrink: 0; width: 32px; height: 32px;
+    border-radius: 50%; border: 1px solid var(--border-hi);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .78rem; font-weight: 700; color: var(--violet);
+    background: rgba(139,92,246,0.1); margin-top: .1rem;
+  }
+  .step-content h4 {
+    font-size: .95rem; font-weight: 700; color: var(--text); margin-bottom: .3rem;
+  }
+  .step-content p { font-size: .88rem; color: var(--text-dim); line-height: 1.6; }
+  .step-tag {
+    display: inline-block; font-size: .7rem; font-weight: 600;
+    padding: .15rem .55rem; border-radius: 4px; margin-top: .45rem;
+  }
+  .tag-purple { background: rgba(139,92,246,0.15); color: var(--violet); }
+  .tag-teal   { background: rgba(45,212,191,0.12);  color: var(--teal); }
+  .tag-blue   { background: rgba(96,165,250,0.12);  color: var(--blue); }
+
+  /* loop diagram */
+  .loop-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 2rem;
+    position: sticky; top: 72px;
+  }
+  .loop-diagram h4 {
+    font-size: .78rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 1.5rem;
+  }
+  .ld-flow {
+    display: flex; flex-direction: column; gap: .3rem;
+    font-size: .85rem;
+  }
+  .ld-node {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .65rem .85rem; border-radius: 8px;
+  }
+  .ld-node.phase-rollout { background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.2); }
+  .ld-node.phase-wiki    { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); }
+  .ld-node.phase-skill   { background: rgba(45,212,191,0.07); border: 1px solid rgba(45,212,191,0.2); }
+  .ld-node.phase-gate    { background: rgba(251,191,36,0.07);  border: 1px solid rgba(251,191,36,0.2); }
+  .ld-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .ld-node.phase-rollout .ld-dot { background: var(--blue); }
+  .ld-node.phase-wiki    .ld-dot { background: var(--violet); }
+  .ld-node.phase-skill   .ld-dot { background: var(--teal); }
+  .ld-node.phase-gate    .ld-dot { background: #fbbf24; }
+  .ld-node span { color: var(--text); flex: 1; }
+  .ld-node small { color: var(--text-dim); font-size: .78rem; }
+  .ld-arrow {
+    padding-left: 1.6rem; color: var(--border-hi); font-size: .78rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .ld-arrow::before { content: '↓'; }
+  .invariant-box {
+    margin-top: 1.4rem; padding: .9rem 1rem;
+    background: rgba(45,212,191,0.06); border: 1px solid rgba(45,212,191,0.2);
+    border-radius: 8px; font-size: .82rem; color: var(--teal); line-height: 1.6;
+  }
+  .invariant-box strong { color: var(--teal); }
+
+  /* ── ARCHITECTURE ── */
+  #architecture { background: var(--bg); }
+  .arch-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem; margin-top: 3.5rem;
+  }
+  @media (max-width: 900px) { .arch-grid { grid-template-columns: 1fr; } }
+  .arch-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 2rem;
+    transition: border-color .25s, transform .2s, box-shadow .2s;
+    position: relative; overflow: hidden;
+  }
+  .arch-card:hover {
+    border-color: var(--border-hi); transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+  .arch-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .arch-card.card-daemon::before  { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+  .arch-card.card-core::before   { background: linear-gradient(90deg, var(--purple), var(--teal)); }
+  .arch-card.card-cockpit::before { background: linear-gradient(90deg, var(--teal), var(--blue)); }
+  .arch-icon {
+    width: 44px; height: 44px; border-radius: 10px; margin-bottom: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-blue   { background: rgba(96,165,250,0.12);  color: var(--blue); }
+  .icon-purple { background: rgba(139,92,246,0.12); color: var(--purple); }
+  .icon-teal   { background: rgba(45,212,191,0.1);  color: var(--teal); }
+  .arch-name { font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: .5rem; }
+  .arch-title { font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: .8rem; }
+  .arch-desc { font-size: .9rem; color: var(--text-dim); line-height: 1.65; }
+  .arch-tags { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1.2rem; }
+  .arch-tag {
+    font-size: .72rem; font-weight: 600; padding: .2rem .65rem;
+    border-radius: 4px; border: 1px solid;
+  }
+  .arch-tag.blue   { color: var(--blue);   border-color: rgba(96,165,250,0.3);  background: rgba(96,165,250,0.06);  }
+  .arch-tag.purple { color: var(--violet); border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.06); }
+  .arch-tag.teal   { color: var(--teal);   border-color: rgba(45,212,191,0.3);  background: rgba(45,212,191,0.06);  }
+
+  /* ── SKILLS ── */
+  #skills { background: var(--bg-2); }
+  .skills-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2rem; margin-top: 3.5rem;
+  }
+  @media (max-width: 768px) { .skills-grid { grid-template-columns: 1fr; } }
+  .skill-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.75rem;
+  }
+  .skill-card h3 { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: .6rem; }
+  .skill-card p { font-size: .88rem; color: var(--text-dim); line-height: 1.65; }
+  .metric-row {
+    display: flex; gap: 1rem; margin-top: 1.2rem; flex-wrap: wrap;
+  }
+  .metric {
+    flex: 1; min-width: 100px; background: var(--bg-3);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: .9rem 1rem; text-align: center;
+  }
+  .metric-val {
+    font-size: 1.5rem; font-weight: 800; color: var(--violet);
+    display: block; margin-bottom: .2rem;
+  }
+  .metric-lbl { font-size: .75rem; color: var(--text-dim); }
+
+  /* impact entry */
+  .impact-entry {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.3rem 1.5rem; font-size: .83rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: var(--text-dim); line-height: 1.8;
+    grid-column: 1 / -1;
+  }
+  .impact-entry .kw  { color: var(--violet); }
+  .impact-entry .ok  { color: var(--teal); }
+  .impact-entry .bad { color: #f87171; }
+  .impact-entry .num { color: var(--blue); }
+  .impact-entry .cmt { color: #4c5566; }
+
+  /* ── VAULT ── */
+  #vault { background: var(--bg); }
+  .vault-grid {
+    display: grid; grid-template-columns: 1fr 1.3fr;
+    gap: 4rem; align-items: center; margin-top: 3.5rem;
+  }
+  @media (max-width: 768px) { .vault-grid { grid-template-columns: 1fr; } }
+  .vault-tree {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: .84rem; line-height: 1.9;
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.6rem;
+    color: var(--text-dim);
+  }
+  .vault-tree .dir  { color: var(--blue); }
+  .vault-tree .file { color: var(--text-dim); }
+  .vault-tree .hl   { color: var(--violet); font-weight: 700; }
+  .vault-tree .dim  { color: #3a3a55; }
+  .vault-features { display: flex; flex-direction: column; gap: 1.4rem; }
+  .vault-feature h4 {
+    font-size: .95rem; font-weight: 700; color: var(--text); margin-bottom: .35rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .vault-feature p { font-size: .88rem; color: var(--text-dim); line-height: 1.65; padding-left: 1.6rem; }
+  .feat-icon {
+    width: 22px; height: 22px; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .8rem;
+  }
+
+  /* ── PROVIDERS ── */
+  #providers { background: var(--bg-2); }
+  .providers-table-wrap {
+    overflow-x: auto; margin-top: 3rem;
+    border: 1px solid var(--border); border-radius: 12px;
+  }
+  table {
+    width: 100%; border-collapse: collapse; font-size: .88rem;
+  }
+  thead th {
+    padding: .9rem 1.3rem; text-align: left;
+    font-size: .75rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-dim); background: rgba(255,255,255,.025);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: .85rem 1.3rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim); vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,.018); }
+  .role-badge {
+    display: inline-block; font-size: .75rem; font-weight: 600;
+    padding: .22rem .7rem; border-radius: 5px;
+  }
+
+  /* ── QUICKSTART ── */
+  #quickstart { background: var(--bg-3); }
+  .qs-steps {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 2rem; margin-top: 3.5rem;
+  }
+  @media (max-width: 768px) { .qs-steps { grid-template-columns: 1fr; } }
+  .qs-step {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.6rem;
+  }
+  .qs-num {
+    font-size: .72rem; font-weight: 700; letter-spacing: .12em;
+    color: var(--purple); text-transform: uppercase; margin-bottom: .5rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .qs-num::before {
+    content: attr(data-n);
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; font-weight: 800; color: var(--violet);
+    flex-shrink: 0;
+  }
+  .qs-step h4 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .6rem; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: .95rem 1.1rem; overflow-x: auto;
+    font-size: .82rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    line-height: 1.7; color: var(--slate); margin-top: .7rem;
+  }
+  pre .cmd { color: var(--teal); }
+  pre .cmt { color: #4c5566; }
+  .qs-note { font-size: .82rem; color: var(--text-dim); margin-top: .6rem; line-height: 1.6; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--bg); border-top: 1px solid var(--border);
+    padding: 3rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+  .footer-logo { font-size: 1.3rem; font-weight: 800; letter-spacing: .02em; margin-bottom: .5rem; }
+  .footer-logo .g { color: var(--violet); }
+  .footer-sub { font-size: .85rem; color: var(--text-dim); max-width: 400px; margin: 0 auto 1.5rem; line-height: 1.65; }
+  .footer-links { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
+  .footer-links a { font-size: .85rem; color: var(--text-dim); text-decoration: none; transition: color .2s; }
+  .footer-links a:hover { color: var(--violet); }
+  .footer-copy { font-size: .78rem; color: #3a3a55; margin-top: 2rem; }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-logo" href="#">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <path d="M11 2L3 7v8l8 5 8-5V7L11 2z" stroke="#8b5cf6" stroke-width="1.5" stroke-linejoin="round"/>
+      <circle cx="11" cy="12" r="3" fill="rgba(139,92,246,0.3)" stroke="#a78bfa" stroke-width="1"/>
+    </svg>
+    cairn
+  </a>
+  <ul class="nav-links">
+    <li><a href="#loop">Loop</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#vault">Vault</a></li>
+    <li><a href="#quickstart">Setup</a></li>
+  </ul>
+  <a class="nav-cta" href="https://github.com/isaacpattis/cairn">GitHub →</a>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <span class="hero-label">WikiSkill Harness · macOS</span>
+  <h1 class="hero-title">Agents that<br>teach themselves.</h1>
+  <p class="hero-sub">
+    <strong>Cairn</strong> implements the WikiSkill loop: an agent runs tasks, a curator
+    distils what happened into a knowledge wiki, a second curator proposes one skill change,
+    and the change survives only if it <strong>measurably improves</strong> the next run.
+  </p>
+  <div class="hero-actions">
+    <a class="btn-primary" href="#quickstart">Get started</a>
+    <a class="btn-secondary" href="#loop">How it works →</a>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── LOOP ── -->
+<section id="loop">
+  <div class="container">
+    <div class="section-label">The core idea</div>
+    <h2 class="section-title">A self-improving <span class="accent">loop</span></h2>
+    <p class="section-body">
+      Each iteration runs a training split, folds the transcripts into a living wiki, proposes
+      exactly one skill change, and gates it against a held-out validation score. Skills that
+      don't earn their keep are rolled back. The wiki never is.
+    </p>
+
+    <div class="loop-grid">
+      <div class="loop-steps">
+        <div class="loop-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Rollouts</h4>
+            <p>Run the train split on the deploy model via OpenCode V2. Score every transcript with a deterministic verifier. Redact and write condensed traces to <code>raw/iter-NNN/</code>.</p>
+            <span class="step-tag tag-blue">DeepSeek V4 Pro · Fireworks</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Wiki Maintainer</h4>
+            <p>Reads the condensed traces and patches <code>wiki/</code> with new patterns and observations. The only role that ever touches the wiki.</p>
+            <span class="step-tag tag-purple">Claude Sonnet 5 · Bedrock</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Skill Proposer</h4>
+            <p>Reads <code>wiki/patterns/</code> and writes exactly one skill diff into <code>skills/</code>. If the diff touches more than one skill folder it is rejected unscored.</p>
+            <span class="step-tag tag-purple">Claude Opus 5 · Bedrock</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Gate</h4>
+            <p>Run the validation split. Accept only if the new score <em>strictly</em> beats the best so far. On accept, commit. On reject, <code>git restore skills/</code> — but commit the wiki anyway.</p>
+            <span class="step-tag tag-teal">Deterministic · No LLM</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Append &amp; repeat</h4>
+            <p>Write one entry to <code>wiki/skill-impact.md</code> either way. Reload the full skill text into the next iteration's inference agent and go again.</p>
+            <span class="step-tag tag-teal">Stop at 100% val · or 8 iters</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="loop-diagram">
+        <h4>Data flow</h4>
+        <div class="ld-flow">
+          <div class="ld-node phase-rollout">
+            <div class="ld-dot"></div>
+            <span>Rollouts on deploy model</span>
+            <small>train split</small>
+          </div>
+          <div class="ld-arrow">condensed traces → raw/</div>
+          <div class="ld-node phase-wiki">
+            <div class="ld-dot"></div>
+            <span>Wiki Maintainer</span>
+            <small>patches wiki/</small>
+          </div>
+          <div class="ld-arrow">reads patterns</div>
+          <div class="ld-node phase-skill">
+            <div class="ld-dot"></div>
+            <span>Skill Proposer</span>
+            <small>one diff to skills/</small>
+          </div>
+          <div class="ld-arrow">diff scope check → Jev repeat</div>
+          <div class="ld-node phase-gate">
+            <div class="ld-dot"></div>
+            <span>Gate: validation split</span>
+            <small>accept or git restore</small>
+          </div>
+          <div class="ld-arrow">commit + append skill-impact.md</div>
+          <div class="ld-node phase-rollout">
+            <div class="ld-dot"></div>
+            <span>Next iteration</span>
+            <small>inject full SKILL.md text</small>
+          </div>
+        </div>
+        <div class="invariant-box">
+          <strong>Two invariants.</strong> Only <code>skills/</code> feeds back into rollouts —
+          the inference agent is sandboxed away from the wiki. The best score starts at the
+          empty-skill baseline; a first proposal that ties it is a rejection.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── ARCHITECTURE ── -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label">System design</div>
+    <h2 class="section-title">Three <span class="accent">components</span></h2>
+    <p class="section-body">
+      A Rust daemon owns the loop, vault, and credentials. A Tauri cockpit relays through it
+      without ever touching a secret. OpenCode V2 executes every rollout in an isolated sandbox.
+    </p>
+    <div class="arch-grid">
+      <div class="arch-card card-daemon">
+        <div class="arch-icon icon-blue">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+            <rect x="3" y="3" width="6" height="6" rx="1.5"/>
+            <rect x="13" y="3" width="6" height="6" rx="1.5"/>
+            <rect x="3" y="13" width="6" height="6" rx="1.5"/>
+            <path d="M16 13v6M13 16h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="arch-name">crates/wikiskilld</div>
+        <div class="arch-title">wikiskilld</div>
+        <div class="arch-desc">
+          The macOS launchd daemon. Owns every run and schedule, supervises OpenCode under a
+          Seatbelt profile, serves a localhost API with a bearer token, and reads credentials
+          exclusively from the Keychain. Runs survive closing the cockpit.
+        </div>
+        <div class="arch-tags">
+          <span class="arch-tag blue">Rust · Tokio · Axum</span>
+          <span class="arch-tag blue">launchd agent</span>
+          <span class="arch-tag blue">Keychain</span>
+        </div>
+      </div>
+
+      <div class="arch-card card-core">
+        <div class="arch-icon icon-purple">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="4"/>
+            <path d="M11 2v3M11 17v3M2 11h3M17 11h3M4.9 4.9l2.1 2.1M15 15l2.1 2.1M4.9 17.1l2.1-2.1M15 7l2.1-2.1"/>
+          </svg>
+        </div>
+        <div class="arch-name">crates/wikiskill-core</div>
+        <div class="arch-title">wikiskill-core</div>
+        <div class="arch-desc">
+          Library crate: the loop, gate, verifier runner, curator agent loops, Bedrock and
+          Fireworks clients, Jev integration, vault and git operations, and the Seatbelt profile
+          generator. 172 tests pass with no network or credentials.
+        </div>
+        <div class="arch-tags">
+          <span class="arch-tag purple">Loop &amp; gate</span>
+          <span class="arch-tag purple">Bedrock · Fireworks</span>
+          <span class="arch-tag purple">Seatbelt</span>
+        </div>
+      </div>
+
+      <div class="arch-card card-cockpit">
+        <div class="arch-icon icon-teal">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="4" width="18" height="13" rx="2"/>
+            <path d="M7 20h8M11 17v3"/>
+            <path d="M6 9h2M10 9h6M6 12h4M14 12h2"/>
+          </svg>
+        </div>
+        <div class="arch-name">apps/cockpit</div>
+        <div class="arch-title">Cockpit</div>
+        <div class="arch-desc">
+          A Tauri window that is a pure relay — it reads the daemon's localhost API and renders
+          runs, diffs, skill impact, and patterns. API keys never reach the webview. "Open in
+          Obsidian" links surface every note at a click.
+        </div>
+        <div class="arch-tags">
+          <span class="arch-tag teal">Tauri 2</span>
+          <span class="arch-tag teal">Runs · Gate · Patterns</span>
+          <span class="arch-tag teal">obsidian:// links</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── SKILLS ── -->
+<section id="skills">
+  <div class="container">
+    <div class="section-label">Evaluation and gating</div>
+    <h2 class="section-title">Skills that earn <span class="accent">their keep</span></h2>
+    <p class="section-body">
+      Every skill must beat the best-so-far validation score on the exact model it will run on.
+      A tie is a rejection. The gate is a deterministic verifier — no LLM, no judgment.
+    </p>
+    <div class="skills-grid">
+      <div class="skill-card">
+        <h3>Strict acceptance rule</h3>
+        <p>
+          The baseline is the empty-skill validation score. A proposal is accepted only if its
+          validation score is <em>strictly higher</em> than the best-so-far. On reject,
+          <code>git restore skills/</code> runs immediately — but the wiki update is committed
+          regardless.
+        </p>
+        <div class="metric-row">
+          <div class="metric">
+            <span class="metric-val">30</span>
+            <span class="metric-lbl">train tasks</span>
+          </div>
+          <div class="metric">
+            <span class="metric-val">15</span>
+            <span class="metric-lbl">val tasks</span>
+          </div>
+          <div class="metric">
+            <span class="metric-val">15</span>
+            <span class="metric-lbl">test tasks</span>
+          </div>
+        </div>
+      </div>
+      <div class="skill-card">
+        <h3>Full skill injection</h3>
+        <p>
+          Every active <code>SKILL.md</code> is concatenated into the inference agent's prompt
+          before each iteration's rollouts — byte-identical across all of them so prompt caching
+          absorbs the cost. The native <code>skill</code> tool is denied; selection is never a
+          variable in a measurement.
+        </p>
+        <div class="metric-row">
+          <div class="metric">
+            <span class="metric-val">8</span>
+            <span class="metric-lbl">max iters</span>
+          </div>
+          <div class="metric">
+            <span class="metric-val">390</span>
+            <span class="metric-lbl">max rollouts</span>
+          </div>
+        </div>
+      </div>
+      <div class="impact-entry">
+        <span class="cmt"># wiki/skill-impact.md — appended every iteration</span><br>
+        <br>
+        <span class="kw">### iter-003 · tighten-tool-ordering ·</span> <span class="ok">Accepted</span><br>
+        - val: <span class="num">0.733</span> (best was <span class="num">0.667</span>) · rule: strict, single run<br>
+        - diff: skills/tighten-tool-ordering/SKILL.md<br>
+        <br>
+        <span class="kw">### iter-004 · break-repetition-loop ·</span> <span class="bad">Rejected</span><br>
+        - val: <span class="num">0.600</span> (best <span class="num">0.733</span>) · rule: strict, single run<br>
+        - jev_repeat_of: iter-001 (p=<span class="num">0.82</span>, warned)<br>
+        - diff: skills/break-repetition-loop/SKILL.md
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── VAULT ── -->
+<section id="vault">
+  <div class="container">
+    <div class="section-label">The vault</div>
+    <h2 class="section-title">Obsidian vault.<br><span class="accent">Git repo.</span> Both.</h2>
+    <p class="section-body">
+      The vault is an Obsidian folder and a git repo at once. Every accepted change is a
+      commit you can inspect or revert from the cockpit. The wiki is meant to be read by a
+      person; the skills are what the agent executes.
+    </p>
+    <div class="vault-grid">
+      <div class="vault-tree">
+<span class="dir">~/Vaults/WikiSkill/</span>
+<span class="dim">├── </span><span class="dir">raw/</span>
+<span class="dim">│   ├── </span><span class="dir">iter-NNN/</span><span class="file">   condensed traces, 0444</span>
+<span class="dim">│   ├── </span><span class="dir">_jsonl/</span><span class="file">     full transcripts</span>
+<span class="dim">│   └── </span><span class="dir">daily/</span><span class="file">      coding sessions</span>
+<span class="dim">├── </span><span class="dir">wiki/</span>
+<span class="dim">│   ├── </span><span class="file">index.md</span><span class="file">    static catalog</span>
+<span class="dim">│   ├── </span><span class="file">logs.md</span><span class="file">     append-only</span>
+<span class="dim">│   ├── </span><span class="hl">skill-impact.md</span>
+<span class="dim">│   └── </span><span class="dir">patterns/</span><span class="file">   one note per pattern</span>
+<span class="dim">├── </span><span class="hl">skills/</span>
+<span class="dim">│   └── </span><span class="dir">&lt;name&gt;/</span>
+<span class="dim">│       ├── </span><span class="hl">SKILL.md</span><span class="file">    what the agent runs</span>
+<span class="dim">│       └── </span><span class="file">PURPOSE.md  [[links]] to patterns</span>
+<span class="dim">└── </span><span class="dir">eval/</span>
+<span class="dim">    ├── </span><span class="file">train.jsonl</span>
+<span class="dim">    ├── </span><span class="file">val.jsonl</span>
+<span class="dim">    └── </span><span class="file">test.jsonl</span>
+      </div>
+
+      <div class="vault-features">
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(139,92,246,0.15);color:#a78bfa;">⬡</span> Knowledge graph in Obsidian</h4>
+          <p>Pattern notes, skill PURPOSE files, and impact logs are plain Markdown with <code>[[wikilinks]]</code>. Open any note in Obsidian; use the graph view to see which patterns motivated which skills.</p>
+        </div>
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(45,212,191,0.1);color:#2dd4bf;">⎇</span> Every accepted skill is a commit</h4>
+          <p>The daemon commits on accept and <code>git restore skills/</code> on reject. Revert from the cockpit's Gate view — or from the terminal — if a later iteration regresses.</p>
+        </div>
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(96,165,250,0.1);color:#60a5fa;">⚡</span> Daily-use capture</h4>
+          <p>A small OpenCode plugin posts finished coding sessions to the daemon. The nightly maintainer folds them into the wiki; the weekly proposer checks whether they suggest a skill change.</p>
+        </div>
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(251,191,36,0.1);color:#fbbf24;">🔒</span> Sandboxed reads</h4>
+          <p>The rollout Seatbelt profile denies reads of the vault path entirely. The inference agent cannot read the wiki — the paper shows it degrades skill quality if it can.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── PROVIDERS ── -->
+<section id="providers">
+  <div class="container">
+    <div class="section-label">Model plan</div>
+    <h2 class="section-title">The right model<br>for each <span class="accent">role</span></h2>
+    <p class="section-body">
+      Rollouts run on the deploy model — the one you code with daily. Skills evolved on a
+      different model hurt rather than help. Curators stay on Claude; counting and gating
+      stay in Rust.
+    </p>
+    <div class="providers-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th>Model</th>
+            <th>Endpoint</th>
+            <th>Why</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="role-badge" style="background:rgba(96,165,250,0.1);color:#60a5fa;">Inference</span></td>
+            <td>DeepSeek V4 Pro</td>
+            <td>Fireworks</td>
+            <td style="color:var(--text-dim)">Skills must be gated on the model that will run them</td>
+          </tr>
+          <tr>
+            <td><span class="role-badge" style="background:rgba(96,165,250,0.08);color:#93c5fd;">Exploratory</span></td>
+            <td>DeepSeek V4 Flash</td>
+            <td>Fireworks</td>
+            <td style="color:var(--text-dim)">≈ 1/12th cost; re-gate on Pro before adoption</td>
+          </tr>
+          <tr>
+            <td><span class="role-badge" style="background:rgba(139,92,246,0.1);color:#a78bfa;">Wiki Maintainer</span></td>
+            <td>Claude Sonnet 5</td>
+            <td>Bedrock runtime</td>
+            <td style="color:var(--text-dim)">Long traces in, structured patch edits out</td>
+          </tr>
+          <tr>
+            <td><span class="role-badge" style="background:rgba(139,92,246,0.14);color:#c4b5fd;">Skill Proposer</span></td>
+            <td>Claude Opus 5</td>
+            <td>Bedrock runtime</td>
+            <td style="color:var(--text-dim)">One high-leverage change per iteration</td>
+          </tr>
+          <tr>
+            <td><span class="role-badge" style="background:rgba(45,212,191,0.08);color:#2dd4bf;">Decision layer</span></td>
+            <td>Jev 1.13</td>
+            <td>TypeSafe API</td>
+            <td style="color:var(--text-dim)">Cheap typed judgments; never gates, writes, or counts</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── QUICKSTART ── -->
+<section id="quickstart">
+  <div class="container">
+    <div class="section-label">Setup</div>
+    <h2 class="section-title">Up in <span class="accent">eight steps</span></h2>
+    <p class="section-body">
+      macOS only. Everything runs on one machine: a Rust daemon, a vault, and OpenCode V2.
+      See <a href="setup.md" style="color:var(--violet)">docs/setup.md</a> for the full guide.
+    </p>
+    <div class="qs-steps">
+      <div class="qs-step">
+        <div class="qs-num" data-n="1">Build</div>
+        <h4>Build the daemon and cockpit</h4>
+        <pre><span class="cmd">cargo build --release</span>
+<span class="cmd">cargo test --workspace</span>   <span class="cmt"># 172 tests, no network</span>
+<span class="cmd">cd apps/cockpit/src-tauri && cargo build</span></pre>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="2">Executor</div>
+        <h4>Install OpenCode V2 (pinned)</h4>
+        <pre><span class="cmd">npm install -g @opencode/cli</span>
+<span class="cmd">opencode2 --version</span>   <span class="cmt"># must be 2.0.x</span></pre>
+        <p class="qs-note">The daemon checks the version at startup and refuses anything outside the pinned minor.</p>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="3">Vault</div>
+        <h4>Initialise the vault</h4>
+        <pre><span class="cmd">wikiskilld init --vault ~/Vaults/WikiSkill</span></pre>
+        <p class="qs-note">Keep the vault outside ~/Documents, ~/Desktop, and iCloud Drive — sync clients race daemon writes.</p>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="4">Credentials</div>
+        <h4>Store API keys in the Keychain</h4>
+        <pre><span class="cmd">wikiskilld credential set wikiskill-fireworks</span>
+<span class="cmd">wikiskilld credential set wikiskill-jev</span>  <span class="cmt"># optional</span></pre>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="5">Models</div>
+        <h4>Set model IDs in config.json</h4>
+        <pre><span class="cmt"># Use inference-profile ids on Bedrock:</span>
+<span class="cmt"># global.anthropic.claude-sonnet-5</span>
+<span class="cmt"># Use dated ids on Fireworks:</span>
+<span class="cmt"># accounts/fireworks/models/deepseek-v4-pro-0813</span></pre>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="6">Tasks</div>
+        <h4>Write your eval task set</h4>
+        <pre><span class="cmt"># 60 tasks from your own work</span>
+<span class="cmt"># eval/train.jsonl  — 30 tasks</span>
+<span class="cmt"># eval/val.jsonl    — 15 tasks</span>
+<span class="cmt"># eval/test.jsonl   — 15 tasks</span></pre>
+        <p class="qs-note">A flaky verifier turns the gate into noise. Every number in the cockpit is downstream of this.</p>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="7">Baseline</div>
+        <h4>Measure the empty-skill score</h4>
+        <pre><span class="cmd">wikiskilld baseline</span></pre>
+        <p class="qs-note">This is the bar a first proposal has to beat. Without it, any acceptance threshold is arbitrary.</p>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="8">Run</div>
+        <h4>Start the loop</h4>
+        <pre><span class="cmd">wikiskilld run</span>            <span class="cmt"># foreground</span>
+<span class="cmd">wikiskilld serve</span>          <span class="cmt"># daemon + API</span>
+<span class="cmd">wikiskilld install-agent</span>  <span class="cmt"># launchd</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">cair<span class="g">n</span></div>
+  <p class="footer-sub">
+    WikiSkill Harness for macOS — a Rust daemon, a Tauri cockpit, and an Obsidian vault
+    that learns from every session.
+  </p>
+  <div class="footer-links">
+    <a href="https://github.com/isaacpattis/cairn">GitHub</a>
+    <a href="setup.md">Setup</a>
+    <a href="eval-tasks.md">Eval tasks</a>
+    <a href="security.md">Security</a>
+    <a href="https://arxiv.org/abs/2608.27454">WikiSkill paper</a>
+  </div>
+  <p class="footer-copy">Dual-licensed MIT OR Apache-2.0</p>
+</footer>
+
+<script>
+// ── hero particle canvas ──
+const canvas = document.getElementById('hero-canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const NUM_NODES = 55;
+const nodes = Array.from({length: NUM_NODES}, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  vx: (Math.random() - .5) * .00018,
+  vy: (Math.random() - .5) * .00018,
+  r: Math.random() * 2.2 + 1.2,
+  pulse: Math.random() * Math.PI * 2,
+  speed: Math.random() * .02 + .012,
+}));
+
+const COLORS = ['#8b5cf6','#a78bfa','#60a5fa','#2dd4bf','#7c3aed'];
+
+let frame = 0;
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  frame++;
+  for (const n of nodes) {
+    n.x += n.vx; n.y += n.vy;
+    if (n.x < 0) n.x = 1; if (n.x > 1) n.x = 0;
+    if (n.y < 0) n.y = 1; if (n.y > 1) n.y = 0;
+  }
+
+  // edges
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const dx = (a.x - b.x) * W, dy = (a.y - b.y) * H;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 170) {
+        ctx.beginPath();
+        ctx.moveTo(a.x * W, a.y * H);
+        ctx.lineTo(b.x * W, b.y * H);
+        const alpha = (1 - d/170) * 0.12;
+        ctx.strokeStyle = `rgba(139,92,246,${alpha})`;
+        ctx.lineWidth = .8;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // nodes
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    const pulsed = n.r + Math.sin(n.pulse + frame * n.speed) * .6;
+    const col = COLORS[i % COLORS.length];
+    ctx.beginPath();
+    ctx.arc(n.x * W, n.y * H, pulsed, 0, Math.PI * 2);
+    ctx.fillStyle = col + '55';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(n.x * W, n.y * H, pulsed * .55, 0, Math.PI * 2);
+    ctx.fillStyle = col + 'cc';
+    ctx.fill();
+  }
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+// ── nav active state ──
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => {
+        l.style.color = l.getAttribute('href') === '#' + e.target.id
+          ? 'var(--violet)' : '';
+      });
+    }
+  }
+}, {threshold: .3});
+sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>
